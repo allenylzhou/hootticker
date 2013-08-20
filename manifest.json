@@ -9,13 +9,14 @@
 		"default_icon": "icon.png"
 	},
 	"permissions": [
-		"tabs"
+		"tabs",
+		"http://*/*",
+		"https://*/*"
 	],
 	"background": {
 		"scripts": [
-			"background.js",
-			"chrome_ex_oauthsimple.js",
-			"chrome_ex_oauth.js"
+			"/oauth2/oauth2.js",
+			"background.js"
 		]
 	},
 	"content_scripts": [
@@ -31,6 +32,15 @@
 				"jquery.js",
 				"ticker.js"
 			]
+		},
+		{
+			"matches": [
+				"https://hootsuite.com/robots.txt*"
+			],
+			"js": [
+				"oauth2/oauth2_inject.js"
+			],
+			"run_at": "document_start"
 		}
 	]
 }
