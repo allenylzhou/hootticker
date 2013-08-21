@@ -11,9 +11,11 @@
 			var streamType;
 			switch(element.type) {
 				case 'FACEBOOK':
-				case 'FACEBOOKPAGE':
 				case 'FACEBOOKGROUP':
 					streamType = "F_HOME_STREAM";
+					break;
+				case 'FACEBOOKPAGE':
+					streamType = "F_WALL";
 					break;
 				case 'TWITTER':
 					streamType = "HOME";
@@ -47,8 +49,12 @@
 					xhr.setRequestHeader("Authorization", "Bearer " + accessToken);
 				},
 				success: function(data) {
-					tickerMessages = data.results;
-					slideTicker();
+					tickerMessages = tickerMessages.concat(data.results);
+					var $message, $messages = $('#hootticker .messages'); 
+					$.each(tickerMessages, function(index, element) {
+						$message = renderMessage(element);
+						$messages.append($message);
+					});
 				}
 			}
 		);
@@ -63,62 +69,86 @@
 		$container.hide();
 	};
 
-	var slideTicker = function() {
-		var i, message, $message;
-		for(i = 0; i < 3; i++) {
-			message = tickerMessages.shift();
-			$message = renderMessage(message);
-			$('#hootticker .messages').append($message);
+	var tickTicker = function() {
+		if (socialNetworks.length > 0) {
+			if (tickerMessages.length > parseInt($(window).width()/350)) {
+				slideTicker();
+			} else {
+				if (tickerMessages.length > 0) {
+					retrieveMessages();
+				}
+			}
 		}
 	};
 
+	var slideTicker = function() {
+		var $firstMessage = $($('#hootticker .messages .message')[0]);
+		var readMessages = parseInt($(window).width()/350);
+		tickerMessages.splice(0, readMessages);
+
+		var marginLeft = parseInt($firstMessage.css('marginLeft'));
+		marginLeft -= readMessages * 350;
+
+		// Slide ticker to the left
+		$firstMessage.animate(
+			{
+				marginLeft: marginLeft + 'px'
+			},
+			'slow'
+		);
+	};
+
 	var renderMessage = function(message) {
-		// TODO: use a helper method to parse message data
-		var $profileImageUrl = $('<img></img>'), 
-			profileImageUrl = ('undefined' !== typeof(message.user.profile_image_url)) ? 
-				message.user.profile_image_url : //twitter
-				message.avatar; //facebook
+		var messageType;
+		if ('undefined' === typeof(message.user)) {
+			messageType = 'FACEBOOK';
+		} else {
+			messageType = 'TWITTER';
+		}
 
-		var $screenName = $('<span></span>'), 
-			screenName = ('undefined' !== typeof(message.user.screen_name)) ?
-				message.user.screen_name : //twitter
-				message.name; //facebook
+		var networkAvatarLink, networkName, postTime, messageContent, borderTop;
 
-		var $createdAt = $('<span></span>'), 
-			createdAt = ('undefined' !== typeof(message.user.created_at)) ?
-				message.user.created_at : //twitter
-				message.createdFormatted; //facebook
+		var $networkAvatarLink = $('<img></img>');
+		var $networkName = $('<p></p>');
+		var $postTime = $('<p></p>');
+		var $messageContent = $('<p></p>');
 
-		var $text = $('<span></span>'), 
-			text = ('undefined' !== typeof(message.user.text)) ?
-				message.text : //twitter
-				message.message; //facebook
+		switch (messageType) {
+			case 'FACEBOOK':
+				networkAvatarLink = message.avatar;
+				networkName = message.name;
+				postTime = message.createdFormatted;
+				messageContent = message.message;
+				borderTop = '4px solid #4c66a4';
+				break;
+			case 'TWITTER':
+				networkAvatarLink = message.user.profile_image_url;
+				networkName = message.user.screen_name;
+				postTime = message.created_at;
+				messageContent = message.text;
+				borderTop = '4px solid #9AE4E8';
+				break;
+		}
 
 		var $container = $('<div></div>');
 		$container.addClass('message');
+		$container.css('borderTop', borderTop);
 
-		$profileImageUrl.attr('src', profileImageUrl);
-		$screenName.html(screenName);
-		$createdAt.html(createdAt);
-		$text.html(text);
+		$networkAvatarLink.attr('src', networkAvatarLink);
+		$networkAvatarLink.addClass('networkAvatarLink');
 
-		$container.append($profileImageUrl);
-		$container.append('<p></p>');
-		$container.find('p').append([$screenName, $createdAt, $text]);
+		$networkName.html(networkName);
+		$networkName.addClass('networkName');
+
+		$postTime.html(postTime);
+		$postTime.addClass('postTime');
+
+		$messageContent.html(messageContent);
+		$messageContent.addClass('messageContent');
+
+		$container.append([$networkAvatarLink, $networkName, $postTime, $messageContent]);
 
 		return $container;
-	};
-
-	var initialize = function() {
-
-	};
-
-	var next = function() {
-
-	};
-
-	var previous = function() {
-
 	};
 
 	chrome.runtime.onMessage.addListener(
@@ -131,28 +161,36 @@
 
 			accessToken = request.accessToken;
 
-			$.ajax(
-				{
-					url: "https://hootsuite.com/api/2/networks",
-					type: "GET",
-					data: {},
-					beforeSend: function(xhr) {
-						xhr.setRequestHeader("Authorization", "Bearer " + accessToken);
-					},
-					success: function(data) {
-						$('#hootticker').show();
+			if (socialNetworks.length === 0) {
+				$.ajax(
+					{
+						url: "https://hootsuite.com/api/2/networks",
+						type: "GET",
+						data: {},
+						beforeSend: function(xhr) {
+							xhr.setRequestHeader("Authorization", "Bearer " + accessToken);
+						},
+						success: function(data) {
+							$('#hootticker').show();
 
-						socialNetworks = data.results;
-						retrieveMessages();
+							socialNetworks = data.results;
+							retrieveMessages();
+						}
 					}
-				}
-			);
+				);
+			}
 		}
 	);
 
 	renderTicker();
-	if('undefined' === typeof(accessToken)) {
-		// Request access token from extension
-	}
+	setInterval(tickTicker, 30000);
+
+	window.onscroll = function(evt) {
+		if((window.innerHeight + window.scrollY) >= document.height) {
+			$('#hootticker').hide();
+		} else {
+			$('#hootticker').show();
+		}
+	};
 
 })();

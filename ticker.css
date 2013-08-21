@@ -3,30 +3,60 @@
 	bottom: 0;
 	width: 100%;
 	height: 80px;
-	background-color: white;
+	background-color: #f4f4f4;
 	z-index: 100;
 }
 
 #hootticker .messages {
-	width: 100%;
-	display: inline-block;
+	overflow: hidden;
 	white-space: nowrap;
-	overflow-x: hidden;
-	height: 100%;
 }
 
 #hootticker .messages .message {
+	display: inline-block;
+	width: 350px;
+	height: 72px;
+	padding-top: 4px;
+}
+
+#hootticker .messages .message img {
 	float: left;
-	width: 33%;
-	height: 100%;
-	border-top: 1px solid blue;
+	margin: 5px;
 }
 
 #hootticker .messages .message p {
+	padding: 0;
 	margin: 0;
-	padding: 5px;
-	text-align: left;
-	word-wrap: break-word;
+	width: 80%;
+		text-align: left;
+		line-height: 13px;
+			float: left;
+			clear: none;
+			word-wrap: break-word;
 }
+
+#hootticker .messages .message p.networkName {
+	color: #4e763e;
+	font-size: 12px;
+	font-weight: bold;
+	font-family: Verdana, Arial, Helvetica, Sans-Serif;
+	line-height: 13px;
+	white-space: nowrap;
+}
+
+#hootticker .messages .message p.postTime {
+	color: #999999;
+	margin-bottom: .4em;
+	font-size: 11px;
+	white-space: nowrap;
+}
+
+#hootticker .messages .message p.messageContent {
+	color: #32363f;
+	font-family: Arial, Helvetica, Sans-Serif;
+	font-size: 12px;
+	white-space: normal;
+}
+
 
 
