@@ -17,6 +17,7 @@
 	width: 350px;
 	height: 72px;
 	padding-top: 4px;
+	background-color: #f4f4f4;
 }
 
 #hootticker .messages .message img {
@@ -35,7 +36,7 @@
 			word-wrap: break-word;
 }
 
-#hootticker .messages .message p.networkName {
+#hootticker .messages .message a.networkName {
 	color: #4e763e;
 	font-size: 12px;
 	font-weight: bold;

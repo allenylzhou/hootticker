@@ -6,9 +6,6 @@
 	var tickerMessages = [];
 
 	var renderTicker = function() {
-		$('#hootloader').stop();
-		$('#hootloader').remove();
-
 		var $container = $('<div></div>');
 		$container.attr('id', 'hootticker');
 		$container.append('<div class="messages"></div>');
@@ -28,6 +25,9 @@
 	};
 
 	var renderMessages = function() {
+		$('#hootloader').stop();
+		$('#hootloader').remove();
+
 		var $message, $messages = $('#hootticker .messages'); 
 		$.each(tickerMessages, function(index, element) {
 			$message = renderMessage(element);
@@ -46,7 +46,7 @@
 		var networkAvatarLink, networkName, postTime, messageContent, borderTop;
 
 		var $networkAvatarLink = $('<img></img>');
-		var $networkName = $('<p></p>');
+		var $networkName = $('<a></a>');
 		var $postTime = $('<p></p>');
 		var $messageContent = $('<p></p>');
 
@@ -54,6 +54,7 @@
 			case 'FACEBOOK':
 				networkAvatarLink = message.avatar;
 				networkName = message.name;
+				networkNameUrl = message.profileUrl;
 				postTime = message.createdFormatted;
 				messageContent = message.message;
 				borderTop = '4px solid #4c66a4';
@@ -61,6 +62,7 @@
 			case 'TWITTER':
 				networkAvatarLink = message.user.profile_image_url;
 				networkName = message.user.screen_name;
+				networkNameUrl = message.user.url;
 				postTime = message.created_at;
 				messageContent = message.text;
 				borderTop = '4px solid #9AE4E8';
@@ -75,6 +77,7 @@
 		$networkAvatarLink.addClass('networkAvatarLink');
 
 		$networkName.html(networkName);
+		$networkName.attr('href', networkNameUrl);
 		$networkName.addClass('networkName');
 
 		$postTime.html(postTime);
@@ -121,6 +124,7 @@
 					var $container = $('<div></div>');
 					$container.attr('id', 'hootloader');
 					$container.css('width', '0');
+					$container.css('height', '76px');
 					$container.css('borderTop', '4px solid #4e763e');
 
 					$('body').append($container);
@@ -128,7 +132,10 @@
 						{
 							width: '100%'
 						},
-						5000
+						5000,
+						function() {
+							$('#hootloader').remove();
+						}
 					);
 					break;
 				case "sync":
@@ -158,8 +165,8 @@
 			command: "sync"
 		}, 
 		function(response) {
-			tickerMessages = response.messages;
-			if (tickerMessages.length > 0) {
+			if ('undefined' !== typeof(response.messages) && response.messages.length > 0) {
+				tickerMessages = response.messages;
 				renderTicker();
 			}
 		}

@@ -65,6 +65,17 @@
 		);
 	}
 
+	chrome.tabs.query({}, function(tabs) {
+		for (var i = 0; i < tabs.length; i++) {
+			chrome.tabs.executeScript(
+				tabs[i].id,
+				{
+					code: "chrome.extension.sendMessage({command: 'execute', tickerStatus: ('undefined' !== typeof(tickerStatus)), tabId: " + tabs[i].id + "});"
+				}
+			);
+		}
+	});
+
 	// Listen for icon browser action
 	chrome.browserAction.onClicked.addListener(function(tab) {
 
@@ -76,12 +87,7 @@
 				alive = true;
 				chrome.tabs.query({}, function(tabs) {
 					for (var i = 0; i < tabs.length; i++) {
-						chrome.tabs.executeScript(
-							tabs[i].id,
-							{
-								code: "chrome.extension.sendMessage({command: 'live', tickerStatus: ('undefined' !== typeof(tickerStatus)), tabId: " + tabs[i].id + "});"
-							}
-						);
+						chrome.tabs.sendMessage(tabs[i].id, {command: "live"}, function(response) {}); 
 					}
 				});
 				$.ajax(
@@ -117,21 +123,19 @@
 	chrome.runtime.onMessage.addListener(
 		function(request, sender, sendResponse) {
 			switch (request.command) {
-				case 'live':
+				case 'execute':
 					if (false === request.tickerStatus) {
 						chrome.tabs.executeScript(request.tabId, {file: "jquery.js" }, function() {
 				            chrome.tabs.executeScript(request.tabId, {file: "ticker.js" }, function() {
-				                chrome.tabs.insertCSS(request.tabId, {file: "ticker.css" }, function() {
-									chrome.tabs.sendMessage(request.tabId, {command: "live"}, function(response) {}); 
-				                });
+				                chrome.tabs.insertCSS(request.tabId, {file: "ticker.css" }, function() {});
 				            });
 				        });
-					} else {
-						chrome.tabs.sendMessage(request.tabId, {command: "live"}, function(response) {}); 
 					}
 					break;
 				case 'sync':
-					sendResponse({messages: messages});
+					if (alive) {
+						sendResponse({messages: messages});
+					}
 					break;
 				case 'tick':
 					messages.splice(0, request.tick);
