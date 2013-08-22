@@ -1,102 +1,39 @@
 (function() {
 	console.log("And we're alive!");
 
-	var accessToken;
-	var socialNetworks = [];
+	var tickerStatus = true;
+	var tickerTimer = null;
 	var tickerMessages = [];
 
-	var retrieveMessages = function() {
-		var requestData = [];
-		$.each(socialNetworks, function(index, element) {
-			var streamType;
-			switch(element.type) {
-				case 'FACEBOOK':
-				case 'FACEBOOKGROUP':
-					streamType = "F_HOME_STREAM";
-					break;
-				case 'FACEBOOKPAGE':
-					streamType = "F_WALL";
-					break;
-				case 'TWITTER':
-					streamType = "HOME";
-					break;
-				default:
-					break;
-			}
-			if ('undefined' !== typeof(streamType) && requestData.length <= 5) {
-				// Build request for multiple streams, max 5
-				requestData.push(
-					{
-						socialNetworkId: element.socialNetworkId,
-						type: streamType,
-						count: 30
-					}
-				);
-			}
-		});
-
-		console.log(requestData);
-
-		$.ajax(
-			{
-				url: "https://hootsuite.com/api/2/messages",
-				type: "GET",
-				data: {
-					interleaved: 1,
-					streams: requestData
-				},
-				beforeSend: function(xhr) {
-					xhr.setRequestHeader("Authorization", "Bearer " + accessToken);
-				},
-				success: function(data) {
-					tickerMessages = tickerMessages.concat(data.results);
-					var $message, $messages = $('#hootticker .messages'); 
-					$.each(tickerMessages, function(index, element) {
-						$message = renderMessage(element);
-						$messages.append($message);
-					});
-				}
-			}
-		);
-	}
-
 	var renderTicker = function() {
+		$('#hootloader').stop();
+		$('#hootloader').remove();
+
 		var $container = $('<div></div>');
 		$container.attr('id', 'hootticker');
 		$container.append('<div class="messages"></div>');
 
 		$('body').append($container);
-		$container.hide();
-	};
+		renderMessages();
 
-	var tickTicker = function() {
-		if (socialNetworks.length > 0) {
-			if (tickerMessages.length > parseInt($(window).width()/350)) {
-				slideTicker();
+		window.onscroll = function(evt) {
+			if((window.innerHeight + window.scrollY) >= document.height) {
+				$('#hootticker').hide();
 			} else {
-				if (tickerMessages.length > 0) {
-					retrieveMessages();
-				}
+				$('#hootticker').show();
 			}
-		}
+		};
+
+		tickerTimer = setInterval(tickTicker, 5000);
 	};
 
-	var slideTicker = function() {
-		var $firstMessage = $($('#hootticker .messages .message')[0]);
-		var readMessages = parseInt($(window).width()/350);
-		tickerMessages.splice(0, readMessages);
-
-		var marginLeft = parseInt($firstMessage.css('marginLeft'));
-		marginLeft -= readMessages * 350;
-
-		// Slide ticker to the left
-		$firstMessage.animate(
-			{
-				marginLeft: marginLeft + 'px'
-			},
-			'slow'
-		);
-	};
+	var renderMessages = function() {
+		var $message, $messages = $('#hootticker .messages'); 
+		$.each(tickerMessages, function(index, element) {
+			$message = renderMessage(element);
+			$messages.append($message);
+		});
+	}
 
 	var renderMessage = function(message) {
 		var messageType;
@@ -151,46 +88,80 @@
 		return $container;
 	};
 
+	var tickTicker = function() {
+		var tick = parseInt($(window).width()/350);
+		slideTicker(tick);
+		chrome.runtime.sendMessage(
+			{
+				command: "tick",
+				tick: tick
+			}, 
+			function(response) {}
+		);
+	};
+
+	var slideTicker = function(tick) {
+		var $firstMessage = $($('#hootticker .messages .message')[0]);
+		var marginLeft = parseInt($firstMessage.css('marginLeft'));
+		marginLeft -= tick * 350;
+
+		// Slide ticker to the left
+		$firstMessage.animate(
+			{
+				marginLeft: marginLeft + 'px'
+			},
+			'slow'
+		);
+	};
+
 	chrome.runtime.onMessage.addListener(
 		function(request, sender, sendResponse) {
-			// console.log(sender.tab ?
-			// "from a content script:" + sender.tab.url :
-			// "from the extension");
-			// if (request.greeting == "hello")
-			// sendResponse({farewell: "goodbye"});
+			switch (request.command) {
+				case "live":
+					var $container = $('<div></div>');
+					$container.attr('id', 'hootloader');
+					$container.css('width', '0');
+					$container.css('borderTop', '4px solid #4e763e');
 
-			accessToken = request.accessToken;
-
-			if (socialNetworks.length === 0) {
-				$.ajax(
-					{
-						url: "https://hootsuite.com/api/2/networks",
-						type: "GET",
-						data: {},
-						beforeSend: function(xhr) {
-							xhr.setRequestHeader("Authorization", "Bearer " + accessToken);
+					$('body').append($container);
+					$container.animate(
+						{
+							width: '100%'
 						},
-						success: function(data) {
-							$('#hootticker').show();
-
-							socialNetworks = data.results;
-							retrieveMessages();
+						5000
+					);
+					break;
+				case "sync":
+					if (request.messages.length > 0) {
+						tickerMessages = request.messages;
+						if ($('#hootticker').length > 0) {
+							renderMessages();
+						} else {
+							renderTicker();
 						}
 					}
-				);
+					break;
+				case "die":
+					if ('undefined' !== typeof(tickerTimer)) {
+						clearInterval(tickerTimer);
+					}
+					$('#hootticker').remove();
+					break;
+				default:
+					break;
 			}
 		}
 	);
 
-	renderTicker();
-	setInterval(tickTicker, 30000);
-
-	window.onscroll = function(evt) {
-		if((window.innerHeight + window.scrollY) >= document.height) {
-			$('#hootticker').hide();
-		} else {
-			$('#hootticker').show();
+	chrome.runtime.sendMessage(
+		{
+			command: "sync"
+		}, 
+		function(response) {
+			tickerMessages = response.messages;
+			if (tickerMessages.length > 0) {
+				renderTicker();
+			}
 		}
-	};
-
+	);
 })();

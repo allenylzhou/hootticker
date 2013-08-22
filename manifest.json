@@ -16,6 +16,7 @@
 	"background": {
 		"scripts": [
 			"/oauth2/oauth2.js",
+			"jquery.js",
 			"background.js"
 		]
 	},
