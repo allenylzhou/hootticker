@@ -34,7 +34,7 @@
 					{
 						socialNetworkId: element.socialNetworkId,
 						type: streamType,
-						count: 30
+						count: 50
 					}
 				);
 			}
@@ -135,7 +135,7 @@
 					break;
 				case 'tick':
 					messages.splice(0, request.tick);
-					if (messages.length <= 30) {
+					if (messages.length <= 50) {
 						passMessages();
 					}
 					break;
